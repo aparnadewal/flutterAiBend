@@ -9,6 +9,11 @@ app = FastAPI()
 # DB start karo
 init_db()
 
+# ── ROOT ENDPOINT ──
+@app.get("/")
+def root():
+    return {"message": "Flutter AI Backend API", "docs": "/docs", "status": "running"}
+
 # ── REGISTER ──
 @app.post("/register")
 def register(data: RegisterModel):
