@@ -28,7 +28,7 @@ def register(
     # Phone already exists check
     existing = cursor.execute(
         "SELECT id FROM users WHERE phone = ?", 
-        (data.phone,)
+        (phone,)
     ).fetchone()
     
     if existing:
