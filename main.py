@@ -1,6 +1,6 @@
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, Form
+from typing import Optional, List
 from database import init_db, get_db
-from models import RegisterModel, LoginModel, ProfileModel
 from auth import hash_password, verify_password, create_token, decode_token
 import json
 
@@ -16,7 +16,12 @@ def root():
 
 # ── REGISTER ──
 @app.post("/register")
-def register(data: RegisterModel):
+def register(
+    name: str = Form(...),
+    phone: str = Form(...),
+    email: Optional[str] = Form(None),
+    password: str = Form(...)
+):
     db = get_db()
     cursor = db.cursor()
     
@@ -31,10 +36,10 @@ def register(data: RegisterModel):
         raise HTTPException(status_code=400, detail="Phone already registered")
     
     # Save user
-    hashed = hash_password(data.password)
+    hashed = hash_password(password)
     cursor.execute(
         "INSERT INTO users (name, phone, email, password) VALUES (?, ?, ?, ?)",
-        (data.name, data.phone, data.email, hashed)
+        (name, phone, email, hashed)
     )
     db.commit()
     user_id = cursor.lastrowid
@@ -45,17 +50,20 @@ def register(data: RegisterModel):
 
 # ── LOGIN ──
 @app.post("/login")
-def login(data: LoginModel):
+def login(
+    phone: str = Form(...),
+    password: str = Form(...)
+):
     db = get_db()
     cursor = db.cursor()
     
     user = cursor.execute(
         "SELECT * FROM users WHERE phone = ?", 
-        (data.phone,)
+        (phone,)
     ).fetchone()
     db.close()
     
-    if not user or not verify_password(data.password, user["password"]):
+    if not user or not verify_password(password, user["password"]):
         raise HTTPException(status_code=401, detail="Wrong phone or password")
     
     token = create_token(user["id"])
@@ -68,7 +76,12 @@ def login(data: LoginModel):
 
 # ── PROFILE SAVE ──
 @app.post("/save-profile")
-def save_profile(data: ProfileModel, authorization: str = Header(...)):
+def save_profile(
+    skills: str = Form(...),
+    experience: int = Form(...),
+    location: str = Form(...),
+    authorization: str = Header(...)
+):
     user_id = decode_token(authorization)
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token")
@@ -76,7 +89,7 @@ def save_profile(data: ProfileModel, authorization: str = Header(...)):
     db = get_db()
     cursor = db.cursor()
     
-    skills_json = json.dumps(data.skills)
+    skills_json = json.dumps(skills.split(","))
     
     # Already exists toh update, warna insert
     existing = cursor.execute(
@@ -87,12 +100,12 @@ def save_profile(data: ProfileModel, authorization: str = Header(...)):
     if existing:
         cursor.execute(
             "UPDATE profiles SET skills=?, experience=?, location=? WHERE user_id=?",
-            (skills_json, data.experience, data.location, user_id)
+            (skills_json, experience, location, user_id)
         )
     else:
         cursor.execute(
             "INSERT INTO profiles (user_id, skills, experience, location) VALUES (?, ?, ?, ?)",
-            (user_id, skills_json, data.experience, data.location)
+            (user_id, skills_json, experience, location)
         )
     
     db.commit()
