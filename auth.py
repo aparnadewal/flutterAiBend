@@ -23,6 +23,8 @@ def create_token(user_id: int):
 
 def decode_token(token: str):
     try:
+        if token.startswith("Bearer "):
+            token = token[7:]
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload.get("user_id")
     except:

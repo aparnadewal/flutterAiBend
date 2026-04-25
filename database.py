@@ -1,18 +1,20 @@
-import sqlite3
+import psycopg2
+import psycopg2.extras
+import os
+
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
 def get_db():
-    conn = sqlite3.connect("career_app.db")
-    conn.row_factory = sqlite3.Row
+    conn = psycopg2.connect(DATABASE_URL)
     return conn
 
 def init_db():
     conn = get_db()
     cursor = conn.cursor()
-    
-    # Users table
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
             phone TEXT UNIQUE NOT NULL,
             email TEXT,
@@ -20,11 +22,10 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    
-    # Profile table
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS profiles (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             user_id INTEGER UNIQUE NOT NULL,
             skills TEXT,
             experience INTEGER DEFAULT 0,
@@ -32,6 +33,6 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
     ''')
-    
+
     conn.commit()
     conn.close()
